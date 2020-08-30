@@ -266,11 +266,7 @@ to epidemic
   ask sicks [
     let current-sick self
     ask healthys with[distance current-sick < 2 and not immune? and not lockdown?] [
-       ifelse not prevention-care?
-       [ if random-float 100 < infectiouness-probability
-           [ become-infected ]
-       ]
-       [
+
          let prob-with-prevention random-float 60
          if random-float 100 < (infectiouness-probability - prob-with-prevention)
            [ become-infected ]
@@ -337,7 +333,7 @@ to-report total-deaths
 end
 
 to-report number-of-students
-  report
+  report count healthys with[student?]
 end
 
 to-report number-of-leak
@@ -498,20 +494,20 @@ Population characteristics\n\n
 1
 
 CHOOSER
-20
-266
-192
-311
+19
+241
+191
+286
 strategy-type
 strategy-type
 "cyclic" "lockdown" "none"
 0
 
 TEXTBOX
-22
-241
-172
-261
+21
+216
+171
+236
 Strategy type
 16
 93.0
@@ -558,27 +554,6 @@ total-infected
 0
 1
 11
-
-SWITCH
-19
-340
-191
-373
-prevention-care?
-prevention-care?
-0
-1
--1000
-
-TEXTBOX
-19
-322
-215
-350
-(mask, safe distance and so on)
-11
-0.0
-1
 
 MONITOR
 390
@@ -683,10 +658,10 @@ SLIDER
 HORIZONTAL
 
 SWITCH
-201
-340
-373
-373
+200
+315
+372
+348
 immunity-duration?
 immunity-duration?
 1
@@ -694,10 +669,10 @@ immunity-duration?
 -1000
 
 TEXTBOX
-202
-322
-389
-350
+201
+297
+388
+325
 (if on, immunity duration = 92 days)
 11
 0.0
@@ -735,6 +710,21 @@ n-youth
 17
 1
 11
+
+SLIDER
+16
+314
+188
+347
+mask-efetivity
+mask-efetivity
+0
+100
+60.0
+1
+1
+%
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

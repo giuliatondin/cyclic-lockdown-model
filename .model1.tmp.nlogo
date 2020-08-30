@@ -337,7 +337,7 @@ to-report total-deaths
 end
 
 to-report number-of-students
-  report count healthys with[student?]
+  report
 end
 
 to-report number-of-leak

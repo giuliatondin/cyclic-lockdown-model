@@ -15,6 +15,7 @@ turtles-own [
   rangeClass age gender
   death-prob
   wear-mask?
+  asymptomatic?
 ]
 
 
@@ -36,7 +37,7 @@ to setup
   set n-students-sicks 0
   set n-leaks 0
   set n-deaths 0
-  set tick-day 10
+  set tick-day 5
   set n-sicks 0
   set n-healthys 0
   setup-city
@@ -83,16 +84,21 @@ to setup-population
     set rangeClass "none"
     set gender "none"
     set wear-mask? false
+    set asymptomatic? false
     set homebase one-of houses
     move-to homebase
   ]
   setup-range-age
+  setup-death-rate
+  setup-gender
+  setup-asymptomatics
+  setup-mask-adhrents
   setup-population-leak
   setup-students
-  ask n-of (population / 20) healthys
+  ask n-of (population / 20) healthys with[not asymptomatic?]
     [ set severity 1 ]
-  ; ask n-of initial-infecteds healthys
-  ;  [ become-infected ]
+   ask n-of initial-infecteds healthys
+    [ become-infected ]
 end
 
 to setup-range-age
@@ -111,9 +117,12 @@ to setup-range-age
     set rangeClass "youth"
     set age (random (19 - 5 + 1) + 19)
   ]
-  setup-death-rate
-  setup-gender
-  setup-mask-adhrents
+end
+
+to setup-asymptomatics
+  let asymptomatics ((population * %-asymptomatics) / 100)
+  ask n-of asymptomatics healthys with[rangeClass = "adult" or rangeClass = "youth"]
+  [ set asymptomatic? true ]
 end
 
 to setup-death-rate
@@ -130,11 +139,18 @@ to setup-death-rate
 end
 
 to setup-mask-adhrents
-  let adhrents ((population * %-mask-adhrents) / 100)
-  ask n-of ((adhrents * 50) / 100) healthys with[gender = "woman"]
-  [ set wear-mask? true ]
-  ask n-of((adhrents * 50) / 100) healthys with[not wear-mask?]
-  [ set wear-mask? true ]
+  ifelse %-mask-adhrents != 100
+  [
+    let adhrents ((population * %-mask-adhrents) / 100)
+    ask n-of ((adhrents * 50) / 100) healthys with[gender = "woman"]
+    [ set wear-mask? true ]
+    ask n-of ((adhrents * 50) / 100) healthys with[not wear-mask?]
+    [ set wear-mask? true ]
+  ]
+  [
+    ask n-of population healthys
+    [ set wear-mask? true ]
+  ]
 end
 
 to setup-gender
@@ -268,7 +284,7 @@ end
 to return-home
   ask turtles with[shape = "person"]
   [
-    if ticks mod tick-day = 9
+    if ticks mod tick-day = 4
       [ move-to homebase]
   ]
 end
@@ -311,6 +327,10 @@ to become-well
 end
 
 to recover-or-die
+   ask sicks with[not asymptomatic? and sick-time <= (day - )]
+   [ move-to homebase
+     forward 0
+     set lockdown? true ]
    ask sicks with[severity = 0 and sick-time <= day - (random(14 - 7 + 1) + 7)]
    [
      ifelse random-float 100.0 < death-prob
@@ -399,7 +419,7 @@ population
 population
 12
 999
-420.0
+207.0
 3
 1
 NIL
@@ -414,7 +434,7 @@ infectiouness-probability
 infectiouness-probability
 0
 100
-41.0
+63.0
 1
 1
 %
@@ -463,7 +483,7 @@ lockdown-duration
 lockdown-duration
 0
 31
-6.0
+10.0
 1
 1
 NIL
@@ -488,7 +508,7 @@ schoolday-duration
 schoolday-duration
 0
 31
-17.0
+4.0
 1
 1
 NIL
@@ -505,20 +525,20 @@ Population characteristics\n\n
 1
 
 CHOOSER
-21
-283
-193
-328
+22
+267
+194
+312
 strategy-type
 strategy-type
 "cyclic" "lockdown" "none"
-0
+1
 
 TEXTBOX
-23
-258
-173
-278
+24
+242
+174
+262
 Strategy type
 16
 93.0
@@ -586,7 +606,7 @@ initial-infecteds
 initial-infecteds
 0
 100
-18.0
+41.0
 1
 1
 NIL
@@ -662,17 +682,17 @@ SLIDER
 %-population-leak
 0
 100
-10.0
+100.0
 1
 1
 %
 HORIZONTAL
 
 SWITCH
-202
-357
+22
+341
+194
 374
-390
 immunity-duration?
 immunity-duration?
 1
@@ -680,53 +700,20 @@ immunity-duration?
 -1000
 
 TEXTBOX
-203
-339
-390
-367
+23
+323
+210
+351
 (if on, immunity duration = 92 days)
 11
 0.0
 1
 
-MONITOR
-864
-427
-926
-472
-n-elderly
-n-elderly
-17
-1
-11
-
-MONITOR
-936
-427
-993
-472
-n-adult
-n-adult
-17
-1
-11
-
-MONITOR
-1004
-427
-1061
-472
-n-youth
-n-youth
-17
-1
-11
-
 SLIDER
-18
-356
-190
-389
+201
+341
+373
+374
 mask-efetivity
 mask-efetivity
 0
@@ -746,7 +733,22 @@ SLIDER
 %-mask-adhrents
 0
 100
-50.0
+100.0
+1
+1
+%
+HORIZONTAL
+
+SLIDER
+201
+188
+373
+221
+%-asymptomatics
+%-asymptomatics
+0
+50
+9.0
 1
 1
 %

@@ -14,6 +14,7 @@ turtles-own [
   lockdown?
   rangeClass age gender
   death-prob
+  wear-mask?
 ]
 
 
@@ -81,6 +82,7 @@ to setup-population
     set severity 0
     set rangeClass "none"
     set gender "none"
+    set wear-mask? false
     set homebase one-of houses
     move-to homebase
   ]
@@ -111,6 +113,28 @@ to setup-range-age
   ]
   setup-death-rate
   setup-gender
+  setup-mask-adhrents
+end
+
+to setup-death-rate
+  ask n-of population healthys
+  [
+    if age >= 5 and age <= 9 [ set death-prob 0.1 ]
+    if age >= 10 and age <= 39 [ set death-prob 0.2 ]
+    if age >= 40 and age <= 49 [ set death-prob 0.4 ]
+    if age >= 50 and age <= 59 [ set death-prob 1.3 ]
+    if age >= 60 and age <= 69 [ set death-prob 3.6 ]
+    if age >= 70 and age <= 79 [ set death-prob 8 ]
+    if age >= 80 [ set death-prob 14.8 ]
+  ]
+end
+
+to setup-mask-adhrents
+  let adhrents ((population * %-mask-adhrents) / 100)
+  ask n-of ((adhrents * 50) / 100) healthys with[gender = "woman"]
+  [ set wear-mask? true ]
+  ask n-of((adhrents * 50) / 100) healthys with[not wear-mask?]
+  [ set wear-mask? true ]
 end
 
 to setup-gender
@@ -135,19 +159,6 @@ to setup-gender
   [ set gender "woman" ]
   ask n-of ((qtd-youth * 50.55) / 100) healthys with[rangeClass = "youth" and gender = "none"]
   [ set gender "man" ]
-end
-
-to setup-death-rate
-  ask n-of population healthys
-  [
-    if age >= 5 and age <= 9 [ set death-prob 0.1 ]
-    if age >= 10 and age <= 39 [ set death-prob 0.2 ]
-    if age >= 40 and age <= 49 [ set death-prob 0.4 ]
-    if age >= 50 and age <= 59 [ set death-prob 1.3 ]
-    if age >= 60 and age <= 69 [ set death-prob 3.6 ]
-    if age >= 70 and age <= 79 [ set death-prob 8 ]
-    if age >= 80 [ set death-prob 14.8 ]
-  ]
 end
 
 to setup-population-leak
@@ -266,11 +277,11 @@ to epidemic
   ask sicks [
     let current-sick self
     ask healthys with[distance current-sick < 2 and not immune? and not lockdown?] [
-
-         let prob-with-prevention random-float 60
-         if random-float 100 < (infectiouness-probability - prob-with-prevention)
-           [ become-infected ]
-       ]
+      ifelse wear-mask?
+      [ if random 100 < (infectiouness-probability - mask-efetivity)
+        [ become-infected ] ]
+      [ if random 100 < infectiouness-probability
+        [ become-infected ] ]
     ]
   ]
 end
@@ -388,7 +399,7 @@ population
 population
 12
 999
-759.0
+420.0
 3
 1
 NIL
@@ -494,20 +505,20 @@ Population characteristics\n\n
 1
 
 CHOOSER
-19
-241
-191
-286
+21
+283
+193
+328
 strategy-type
 strategy-type
 "cyclic" "lockdown" "none"
 0
 
 TEXTBOX
-21
-216
-171
-236
+23
+258
+173
+278
 Strategy type
 16
 93.0
@@ -643,10 +654,10 @@ number-of-leak
 11
 
 SLIDER
-20
-141
-192
-174
+21
+140
+193
+173
 %-population-leak
 %-population-leak
 0
@@ -658,10 +669,10 @@ SLIDER
 HORIZONTAL
 
 SWITCH
-200
-315
-372
-348
+202
+357
+374
+390
 immunity-duration?
 immunity-duration?
 1
@@ -669,10 +680,10 @@ immunity-duration?
 -1000
 
 TEXTBOX
-201
-297
-388
-325
+203
+339
+390
+367
 (if on, immunity duration = 92 days)
 11
 0.0
@@ -712,15 +723,30 @@ n-youth
 11
 
 SLIDER
-16
-314
-188
-347
+18
+356
+190
+389
 mask-efetivity
 mask-efetivity
 0
 100
 60.0
+1
+1
+%
+HORIZONTAL
+
+SLIDER
+22
+187
+194
+220
+%-mask-adhrents
+%-mask-adhrents
+0
+100
+50.0
 1
 1
 %

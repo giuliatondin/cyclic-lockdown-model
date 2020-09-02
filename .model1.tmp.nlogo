@@ -30,6 +30,7 @@ globals [
   n-students-sicks
   n-deaths
   n-leaks
+  n-waves
 ]
 
 to setup
@@ -40,6 +41,7 @@ to setup
   set tick-day 5
   set n-sicks 0
   set n-healthys 0
+  set n-waves 1
   setup-city
   setup-school
   setup-population
@@ -323,6 +325,16 @@ to set-infected
     [ become-infected ]
 end
 
+to new-wave
+  let aux (count healthys with[not immune?])
+  if aux >= initial-infecteds
+  [
+    set n-waves (n-waves + 1)
+    ask n-of initial-infecteds healthys with[not immune?]
+    [ become-infected ]
+  ]
+end
+
 to become-infected
   set breed sicks
   set sick-time day
@@ -399,9 +411,9 @@ to-report n-youth
   report count healthys with[rangeClass = "youth"]
 end
 
-;to-report n-family
-;  ask n-of 3 population with[]
-;end
+to-report num-of-waves
+  report n-waves
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 389
@@ -641,9 +653,9 @@ number-of-students
 
 BUTTON
 202
-18
-375
-51
+19
+279
+52
 NIL
 set-infected
 NIL
@@ -723,7 +735,7 @@ mask-effectivity
 mask-effectivity
 0
 97
-60.0
+97.0
 1
 1
 %
@@ -738,7 +750,7 @@ SLIDER
 %-mask-adhrents
 0
 100
-70.0
+100.0
 1
 1
 %
@@ -758,6 +770,34 @@ SLIDER
 1
 %
 HORIZONTAL
+
+BUTTON
+289
+19
+378
+52
+NIL
+new-wave
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+1231
+105
+1317
+150
+Wave
+num-of-waves
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

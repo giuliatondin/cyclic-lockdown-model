@@ -96,9 +96,9 @@ to setup-population
   setup-population-leak
   setup-students
   ask n-of (population / 20) healthys with[not asymptomatic?]
-    [ set severity 1 ]
-   ask n-of initial-infecteds healthys
-    [ become-infected ]
+  [ set severity 1 ]
+  ask n-of initial-infecteds healthys
+  [ become-infected ]
 end
 
 to setup-range-age
@@ -292,12 +292,28 @@ end
 to epidemic
   ask sicks [
     let current-sick self
-    ask healthys with[distance current-sick < 2 and not immune? and not lockdown?] [
-      ifelse wear-mask?
-      [ if random 100 < (infectiouness-probability - mask-efetivity)
-        [ become-infected ] ]
-      [ if random 100 < infectiouness-probability
-        [ become-infected ] ]
+    let current-sick-home 0
+    ask current-sick [ set current-sick-home homebase ]
+    ifelse not lockdown?
+    [
+      ask healthys with[distance current-sick < 2 and not immune? and not lockdown?]
+      [
+        ifelse wear-mask? [
+          if random 100 < mask-effectivity
+          [ if random-float 100 < 2.4 [ become-infected ] ]
+        ]
+        [ if random-float 100 < 2.4 [ become-infected ] ]
+      ]
+    ]
+    [
+      ask healthys with[lockdown? and not immune? and current-sick-home = homebase]
+      [ if rangeClass = "youth"
+        [ if random-float 100 < 6.4 [ become-infected ] ]
+        if rangeClass = "adult"
+        [ if random-float 100 < 17.1 [ become-infected ] ]
+        if rangeClass = "elderly"
+        [ if random-float 100 < 28 [ become-infected ] ]
+      ]
     ]
   ]
 end
@@ -382,6 +398,10 @@ end
 to-report n-youth
   report count healthys with[rangeClass = "youth"]
 end
+
+;to-report n-family
+;  ask n-of 3 population with[]
+;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 389
@@ -419,25 +439,10 @@ population
 population
 12
 999
-207.0
+168.0
 3
 1
 NIL
-HORIZONTAL
-
-SLIDER
-201
-141
-374
-174
-infectiouness-probability
-infectiouness-probability
-0
-100
-63.0
-1
-1
-%
 HORIZONTAL
 
 BUTTON
@@ -606,7 +611,7 @@ initial-infecteds
 initial-infecteds
 0
 100
-41.0
+11.0
 1
 1
 NIL
@@ -714,10 +719,10 @@ SLIDER
 341
 373
 374
-mask-efetivity
-mask-efetivity
+mask-effectivity
+mask-effectivity
 0
-100
+97
 60.0
 1
 1
@@ -726,24 +731,24 @@ HORIZONTAL
 
 SLIDER
 22
-187
+183
 194
-220
+216
 %-mask-adhrents
 %-mask-adhrents
 0
 100
-100.0
+70.0
 1
 1
 %
 HORIZONTAL
 
 SLIDER
-201
-188
-373
-221
+202
+140
+374
+173
 %-asymptomatics
 %-asymptomatics
 0

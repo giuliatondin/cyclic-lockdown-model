@@ -46,6 +46,8 @@ to setup
   setup-school
   setup-population
   setup-sectors
+  ask n-of initial-infecteds healthys
+  [ become-infected ]
   reset-ticks
 end
 
@@ -64,6 +66,11 @@ to setup-city
    ]
 end
 
+to setup-school
+  set school-area patches with [pxcor > 20  and pycor > 90]
+  ask school-area [ set pcolor yellow ]
+end
+
 to setup-sectors
   let aux count healthys with[rangeClass = "elderly"]
 
@@ -71,14 +78,31 @@ to setup-sectors
   ask n-of ((aux * %-retired) / 100) healthys with[rangeClass = "elderly"]
   [ set occupation "retired" ]
 
-  set aux count healthys with[rangeClass = "elderly" and occupation != "retired"]
+  set aux count healthys with[occupation = "student" or occupation = "retired"]
+  let totalPop (population - aux)
+
+ ; to-do: add verification if 100% of population already has a occupation
+
+  ; sector: services
+  ask n-of ((totalPop * %-services) / 100) healthys with[occupation = "none"]
+  [ set occupation "services" ]
+
+  ; sector: commerce
+  [ ask n-of ((totalPop * %-commerce) / 100) healthys with[occupation = "none"]
+    [ set occupation "commerce" ]
+  ]
 
   ; sector: industry
-end
+  ask n-of ((totalPop * %-industry) / 100) healthys with[occupation = "none"]
+  [ set occupation "industry" ]
 
-to setup-school
-  set school-area patches with [pxcor > 20  and pycor > 90]
-  ask school-area [ set pcolor yellow ]
+  ; sector: health
+  ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
+  [ set occupation "health" ]
+
+  ; sector: construction
+  ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
+  [ set occupation "construction" ]
 end
 
 to setup-population
@@ -112,8 +136,6 @@ to setup-population
   setup-students
   ask n-of (population / 20) healthys with[not asymptomatic?]
   [ set severity 1 ]
-  ask n-of initial-infecteds healthys
-  [ become-infected ]
 end
 
 to setup-range-age
@@ -202,10 +224,10 @@ end
 
 to setup-students
   ask n-of population healthys
-  [ if rangeClass = "youth"
-    [ set occupation "student"
-      set color blue ]
-  ]
+    [ if rangeClass = "youth"
+      [ set occupation "student"
+        set color blue ]
+    ]
 end
 
 to clock
@@ -282,21 +304,24 @@ to move-turtles
 end
 
 to move-to-school
-  ask turtles with[shape = "person"][
-    if occupation = "student"
-    [
-      ifelse sick? and severity = 1
+  if open-school?
+  [
+    ask turtles with[shape = "person"][
+      if occupation = "student"
+      [
+        ifelse sick? and severity = 1
         [ move-to homebase
           forward 0 ]
         [ move-to one-of patches with [pcolor = yellow] ]
+      ]
+      if not lockdown?
+      [
+        move-turtles
+      ]
     ]
-    if not lockdown?
-    [
-      move-turtles
-    ]
+    epidemic
+    return-home
   ]
-  epidemic
-  return-home
 end
 
 to return-home
@@ -410,24 +435,32 @@ to-report total-deaths
   report n-deaths
 end
 
-to-report number-of-students
-  report count healthys with[occupation = "student"]
-end
-
 to-report number-of-leak
   report n-leaks
 end
 
 to-report n-elderly
-  report count healthys with[rangeClass = "elderly"]
+  report count turtles with[rangeClass = "elderly"]
 end
 
 to-report n-adult
-  report count healthys with[rangeClass = "adult"]
+  report count turtles with[rangeClass = "adult"]
 end
 
 to-report n-youth
-  report count healthys with[rangeClass = "youth"]
+  report count turtles with[rangeClass = "youth"]
+end
+
+to-report n-retired
+  report count turtles with[occupation = "retired"]
+end
+
+to-report num-students
+  report count turtles with[occupation = "student"]
+end
+
+to-report n-none
+  report count turtles with[occupation = "none"]
 end
 
 to-report num-of-waves
@@ -642,7 +675,7 @@ initial-infecteds
 initial-infecteds
 0
 100
-18.0
+13.0
 1
 1
 NIL
@@ -651,9 +684,9 @@ HORIZONTAL
 MONITOR
 864
 237
-977
+986
 282
-N. iinfected students
+N. infected students
 n-students-sicks
 17
 1
@@ -797,15 +830,15 @@ num-of-waves
 11
 
 SLIDER
-28
-339
-132
-372
+250
+342
+354
+375
 %-industry
 %-industry
 0
 100
-0.0
+-181.0
 1
 1
 NIL
@@ -813,29 +846,29 @@ HORIZONTAL
 
 SLIDER
 138
-339
+343
 243
-372
+376
 %-commerce
 %-commerce
 0
 100
-0.0
+100.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-250
-339
-355
-372
+139
+381
+244
+414
 %-health
 %-health
 0
 100
-0.0
+5.0
 1
 1
 NIL
@@ -850,22 +883,22 @@ SLIDER
 %-construction
 0
 100
-0.0
+76.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-139
-382
-243
-415
+28
+342
+132
+375
 %-services
 %-services
 0
 100
-0.0
+100.0
 1
 1
 NIL
@@ -873,14 +906,14 @@ HORIZONTAL
 
 SLIDER
 250
-383
+382
 355
-416
+415
 %-retired
 %-retired
 0
 100
-0.0
+50.0
 1
 1
 NIL
@@ -916,6 +949,72 @@ TEXTBOX
 11
 0.0
 1
+
+MONITOR
+991
+236
+1048
+281
+NIL
+n-youth
+17
+1
+11
+
+MONITOR
+1052
+236
+1109
+281
+NIL
+n-adult
+17
+1
+11
+
+MONITOR
+1114
+236
+1176
+281
+NIL
+n-elderly
+17
+1
+11
+
+MONITOR
+865
+285
+927
+330
+NIL
+n-retired
+17
+1
+11
+
+MONITOR
+931
+285
+1004
+330
+n-students
+num-students
+17
+1
+11
+
+MONITOR
+1008
+285
+1065
+330
+NIL
+n-none
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

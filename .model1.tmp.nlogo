@@ -9,13 +9,13 @@ turtles-own [
   immune?
   immune-time
   homebase
-  student?
   severity    ;; where 0 = mild and 1 = severe symptoms
   lockdown?
   rangeClass age gender
   death-prob
   wear-mask?
   asymptomatic?
+  occupation
 ]
 
 
@@ -45,6 +45,7 @@ to setup
   setup-city
   setup-school
   setup-population
+  setup-sectors
   reset-ticks
 end
 
@@ -63,6 +64,18 @@ to setup-city
    ]
 end
 
+to setup-sectors
+  let aux count healthys with[rangeClass = "elderly"]
+
+  ; sector: retired
+  ask n-of ((aux * %-retired) / 100) healthys with[rangeClass = "elderly"]
+  [ set occupation "retired" ]
+
+  set aux count healthys with[rangeClass = "elderly" and occupation != "retired"]
+
+  ; sector: industry
+end
+
 to setup-school
   set school-area patches with [pxcor > 20  and pycor > 90]
   ask school-area [ set pcolor yellow ]
@@ -75,7 +88,7 @@ to setup-population
     set color green
     set size 7
     set breed healthys
-    set student? false
+    set occupation "none"
     set sick? false
     set sick-time 0
     set immune? false
@@ -180,7 +193,7 @@ to setup-gender
 end
 
 to setup-population-leak
-  ask n-of ((population * %-population-leak) / 100) healthys with[not student?]
+  ask n-of ((population * %-population-leak) / 100) healthys with[occupation != "student"]
   [
     set lockdown? false
     set n-leaks n-leaks + 1
@@ -189,7 +202,10 @@ end
 
 to setup-students
   ask n-of population healthys
-  [ if rangeClass = "youth" [ set student? true ] ]
+  [ if rangeClass = "youth"
+    [ set occupation "student"
+      set color blue ]
+  ]
 end
 
 to clock
@@ -209,10 +225,10 @@ to adjust
   if strategy-type = "cyclic" [
      set cycle-days 0
      let lockdown-counter (tick-day * lockdown-duration)
-     let schoolday-counter (tick-day * schoolday-duration)
-     while [ cycle-days < (lockdown-counter + schoolday-counter) + 1 ]
+     let workday-counter (tick-day * workday-duration)
+     while [ cycle-days < (lockdown-counter + workday-counter) + 1 ]
      [
-         ifelse cycle-days < schoolday-counter + 1
+         ifelse cycle-days < workday-counter + 1
            [ move-to-school
              epidemic ]
            [ ad-lockdown ]
@@ -250,7 +266,7 @@ to ad-lockdown
 end
 
 to move-turtles
-  ask turtles with [shape = "person" and not student? and not lockdown?][
+  ask turtles with [shape = "person" and occupation != "student" and not lockdown?][
     let current-turtle self
     if [pcolor] of patch-ahead 1 != yellow [
       set heading heading + (random-float 3 - random-float 3)
@@ -267,7 +283,7 @@ end
 
 to move-to-school
   ask turtles with[shape = "person"][
-    if student?
+    if occupation = "student"
     [
       ifelse sick? and severity = 1
         [ move-to homebase
@@ -295,7 +311,10 @@ to epidemic
   ask sicks [
     let current-sick self
     let current-sick-home 0
-    ask current-sick [ set current-sick-home homebase ]
+    let current-sick-mask? false
+    ask current-sick
+    [ set current-sick-home homebase
+      set current-sick-mask]
     ifelse not lockdown?
     [
       ask healthys with[distance current-sick < 2 and not immune? and not lockdown?]
@@ -342,7 +361,7 @@ to become-infected
   set sick? true
   set immune? false
   set healthy? false
-  if student?
+  if occupation = "student"
     [ set n-students-sicks (n-students-sicks + 1) ]
 end
 
@@ -392,7 +411,7 @@ to-report total-deaths
 end
 
 to-report number-of-students
-  report count healthys with[student?]
+  report count healthys with[occupation = "student"]
 end
 
 to-report number-of-leak
@@ -451,7 +470,7 @@ population
 population
 12
 999
-168.0
+192.0
 3
 1
 NIL
@@ -492,9 +511,9 @@ NIL
 0
 
 SLIDER
-17
+865
 439
-189
+1037
 472
 lockdown-duration
 lockdown-duration
@@ -507,9 +526,9 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-21
+869
 411
-206
+1054
 433
 Cyclic strategy
 16
@@ -517,12 +536,12 @@ Cyclic strategy
 1
 
 SLIDER
-197
+1045
 440
-369
+1217
 473
-schoolday-duration
-schoolday-duration
+workday-duration
+workday-duration
 0
 31
 4.0
@@ -542,29 +561,29 @@ Population characteristics\n\n
 1
 
 CHOOSER
-22
-267
-194
-312
+865
+358
+1037
+403
 strategy-type
 strategy-type
 "cyclic" "lockdown" "none"
-1
+0
 
 TEXTBOX
-24
-242
-174
-262
+867
+333
+1017
+353
 Strategy type
 16
 93.0
 1
 
 TEXTBOX
-131
+979
 416
-341
+1189
 444
 (only if cyclic-strategy is select above)
 11
@@ -572,10 +591,10 @@ TEXTBOX
 1
 
 PLOT
-865
-17
-1320
-286
+864
+15
+1253
+230
 Populations
 days
 people
@@ -593,11 +612,11 @@ PENS
 "immunes" 1.0 0 -7500403 true "" "plot count healthys with [ immune? ]"
 
 MONITOR
-970
-295
-1065
-340
-Total infected
+1262
+14
+1334
+59
+N. infecteds
 total-infected
 0
 1
@@ -623,30 +642,19 @@ initial-infecteds
 initial-infecteds
 0
 100
-11.0
+18.0
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-1075
-296
-1214
-341
-Total of infected students
-n-students-sicks
-17
-1
-11
-
-MONITOR
 864
-295
-960
-340
-Total of students
-number-of-students
+237
+977
+282
+N. iinfected students
+n-students-sicks
 17
 1
 11
@@ -669,23 +677,12 @@ NIL
 1
 
 MONITOR
-1225
-295
-1322
-340
-Total of deaths
+1261
+65
+1334
+110
+N. deaths
 total-deaths
-17
-1
-11
-
-MONITOR
-864
-350
-1065
-395
-Number of people breaking quarantine
-number-of-leak
 17
 1
 11
@@ -706,10 +703,10 @@ SLIDER
 HORIZONTAL
 
 SWITCH
-22
-341
-194
-374
+21
+244
+193
+277
 immunity-duration?
 immunity-duration?
 1
@@ -717,25 +714,25 @@ immunity-duration?
 -1000
 
 TEXTBOX
-23
-323
-210
-351
+22
+226
+209
+254
 (if on, immunity duration = 92 days)
 11
 0.0
 1
 
 SLIDER
-201
-341
-373
-374
+203
+185
+375
+218
 mask-effectivity
 mask-effectivity
 0
 97
-97.0
+60.0
 1
 1
 %
@@ -743,14 +740,14 @@ HORIZONTAL
 
 SLIDER
 22
-183
+184
 194
-216
+217
 %-mask-adhrents
 %-mask-adhrents
 0
 100
-100.0
+70.0
 1
 1
 %
@@ -789,15 +786,136 @@ NIL
 1
 
 MONITOR
-1231
-105
-1317
-150
+1179
+170
+1229
+215
 Wave
 num-of-waves
 17
 1
 11
+
+SLIDER
+28
+339
+132
+372
+%-industry
+%-industry
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+138
+339
+243
+372
+%-commerce
+%-commerce
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+250
+339
+355
+372
+%-health
+%-health
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+27
+381
+132
+414
+%-construction
+%-construction
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+139
+382
+243
+415
+%-services
+%-services
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+250
+383
+355
+416
+%-retired
+%-retired
+0
+100
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+27
+424
+142
+457
+open-school?
+open-school?
+1
+1
+-1000
+
+TEXTBOX
+30
+313
+180
+333
+Sectors
+16
+93.0
+1
+
+TEXTBOX
+87
+317
+287
+335
+(% of the population in a given sector)
+11
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?

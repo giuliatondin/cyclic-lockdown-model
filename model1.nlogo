@@ -80,29 +80,41 @@ to setup-sectors
 
   set aux count healthys with[occupation = "student" or occupation = "retired"]
   let totalPop (population - aux)
-
- ; to-do: add verification if 100% of population already has a occupation
+  let totalPercentage 0
 
   ; sector: services
   ask n-of ((totalPop * %-services) / 100) healthys with[occupation = "none"]
-  [ set occupation "services" ]
+  [ set occupation "services"
+    set totalPercentage (totalPercentage + %-services)
+  ]
 
   ; sector: commerce
-  [ ask n-of ((totalPop * %-commerce) / 100) healthys with[occupation = "none"]
-    [ set occupation "commerce" ]
+  if totalPercentage != 100
+  [
+    ifelse totalPercentage + %-commerce <= 100
+    [ ask n-of ((totalPop * %-commerce) / 100) healthys with[occupation = "none"]
+      [ set occupation "commerce"
+        set totalPercentage (totalPercentage + %-commerce) ]
+    ]
+    [
+      set aux count healthys with[occupation = "none"]
+      ask n-of aux healthys with[occupation = "none"]
+      [ set occupation "commerce"
+        set totalPercentage 100 ]
+    ]
   ]
 
   ; sector: industry
-  ask n-of ((totalPop * %-industry) / 100) healthys with[occupation = "none"]
-  [ set occupation "industry" ]
+  ; ask n-of ((totalPop * %-industry) / 100) healthys with[occupation = "none"]
+  ; [ set occupation "industry" ]
 
   ; sector: health
-  ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
-  [ set occupation "health" ]
-
-  ; sector: construction
-  ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
-  [ set occupation "construction" ]
+;  ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
+;  [ set occupation "health" ]
+;
+;  ; sector: construction
+;  ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
+;  [ set occupation "construction" ]
 end
 
 to setup-population
@@ -461,6 +473,14 @@ end
 
 to-report n-none
   report count turtles with[occupation = "none"]
+end
+
+to-report n-services
+  report count turtles with[occupation = "services"]
+end
+
+to-report n-commerce
+   report count turtles with[occupation = "commerce"]
 end
 
 to-report num-of-waves
@@ -838,7 +858,7 @@ SLIDER
 %-industry
 0
 100
--181.0
+0.0
 1
 1
 NIL
@@ -853,7 +873,7 @@ SLIDER
 %-commerce
 0
 100
-100.0
+40.0
 1
 1
 NIL
@@ -868,7 +888,7 @@ SLIDER
 %-health
 0
 100
-5.0
+0.0
 1
 1
 NIL
@@ -883,7 +903,7 @@ SLIDER
 %-construction
 0
 100
-76.0
+0.0
 1
 1
 NIL
@@ -898,7 +918,7 @@ SLIDER
 %-services
 0
 100
-100.0
+70.0
 1
 1
 NIL
@@ -1012,6 +1032,28 @@ MONITOR
 330
 NIL
 n-none
+17
+1
+11
+
+MONITOR
+1070
+284
+1140
+329
+NIL
+n-services
+17
+1
+11
+
+MONITOR
+1145
+285
+1225
+330
+NIL
+n-commerce
 17
 1
 11

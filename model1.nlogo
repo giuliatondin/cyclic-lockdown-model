@@ -31,6 +31,7 @@ globals [
   n-deaths
   n-leaks
   n-waves
+  totalPercentage
 ]
 
 to setup
@@ -80,21 +81,20 @@ to setup-sectors
 
   set aux count healthys with[occupation = "student" or occupation = "retired"]
   let totalPop (population - aux)
-  let totalPercentage 0
+  set totalPercentage 0
 
   ; sector: services
   ask n-of ((totalPop * %-services) / 100) healthys with[occupation = "none"]
   [ set occupation "services"
-    set totalPercentage (totalPercentage + %-services)
-  ]
+    set totalPercentage %-services  ]
 
   ; sector: commerce
   if totalPercentage != 100
   [
-    ifelse totalPercentage + %-commerce <= 100
+    ifelse (totalPercentage + %-commerce) <= 100
     [ ask n-of ((totalPop * %-commerce) / 100) healthys with[occupation = "none"]
       [ set occupation "commerce"
-        set totalPercentage (totalPercentage + %-commerce) ]
+        set totalPercentage (%-services + %-commerce) ]
     ]
     [
       set aux count healthys with[occupation = "none"]
@@ -105,16 +105,58 @@ to setup-sectors
   ]
 
   ; sector: industry
-  ; ask n-of ((totalPop * %-industry) / 100) healthys with[occupation = "none"]
-  ; [ set occupation "industry" ]
+  if totalPercentage != 100
+  [
+    ifelse totalPercentage + %-industry <= 100
+    [ ask n-of ((totalPop * %-industry) / 100) healthys with[occupation = "none"]
+      [ set occupation "industry"
+        set totalPercentage (%-services + %-commerce + %-industry) ]
+    ]
+    [
+      set aux count healthys with[occupation = "none"]
+      ask n-of aux healthys with[occupation = "none"]
+      [ set occupation "industry"
+        set totalPercentage 100 ]
+    ]
+  ]
 
   ; sector: health
-;  ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
-;  [ set occupation "health" ]
-;
-;  ; sector: construction
-;  ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
-;  [ set occupation "construction" ]
+  if totalPercentage != 100
+  [
+    ifelse totalPercentage + %-health <= 100
+    [ ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
+      [ set occupation "health"
+        set totalPercentage (%-services + %-commerce + %-industry + %-health) ]
+    ]
+    [
+      set aux count healthys with[occupation = "none"]
+      ask n-of aux healthys with[occupation = "none"]
+      [ set occupation "health"
+        set totalPercentage 100 ]
+    ]
+  ]
+
+  ; sector: construction
+  if totalPercentage != 100
+  [
+    ifelse totalPercentage + %-construction <= 100
+    [ ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
+      [ set occupation "construction"
+        set totalPercentage (%-services + %-commerce + %-industry + %-health + %-construction) ]
+    ]
+    [
+      set aux count healthys with[occupation = "none"]
+      ask n-of aux healthys with[occupation = "none"]
+      [ set occupation "construction"
+        set totalPercentage 100 ]
+    ]
+  ]
+
+  set aux count healthys with[occupation = "none"]
+  ask n-of aux healthys with[occupation = "none"]
+  [ if occupation = "none"
+    [ set occupation "services" ]
+  ]
 end
 
 to setup-population
@@ -237,8 +279,7 @@ end
 to setup-students
   ask n-of population healthys
     [ if rangeClass = "youth"
-      [ set occupation "student"
-        set color blue ]
+      [ set occupation "student" ]
     ]
 end
 
@@ -461,26 +502,6 @@ end
 
 to-report n-youth
   report count turtles with[rangeClass = "youth"]
-end
-
-to-report n-retired
-  report count turtles with[occupation = "retired"]
-end
-
-to-report num-students
-  report count turtles with[occupation = "student"]
-end
-
-to-report n-none
-  report count turtles with[occupation = "none"]
-end
-
-to-report n-services
-  report count turtles with[occupation = "services"]
-end
-
-to-report n-commerce
-   report count turtles with[occupation = "commerce"]
 end
 
 to-report num-of-waves
@@ -858,22 +879,7 @@ SLIDER
 %-industry
 0
 100
-0.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-138
-343
-243
-376
-%-commerce
-%-commerce
-0
-100
-40.0
+39.0
 1
 1
 NIL
@@ -881,29 +887,44 @@ HORIZONTAL
 
 SLIDER
 139
-381
+343
 244
-414
-%-health
-%-health
+376
+%-commerce
+%-commerce
 0
 100
-0.0
+34.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-27
-381
-132
-414
+28
+382
+133
+415
+%-health
+%-health
+0
+100
+29.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+138
+382
+243
+415
 %-construction
 %-construction
 0
 100
-0.0
+60.0
 1
 1
 NIL
@@ -918,7 +939,7 @@ SLIDER
 %-services
 0
 100
-70.0
+20.0
 1
 1
 NIL
@@ -999,61 +1020,6 @@ MONITOR
 281
 NIL
 n-elderly
-17
-1
-11
-
-MONITOR
-865
-285
-927
-330
-NIL
-n-retired
-17
-1
-11
-
-MONITOR
-931
-285
-1004
-330
-n-students
-num-students
-17
-1
-11
-
-MONITOR
-1008
-285
-1065
-330
-NIL
-n-none
-17
-1
-11
-
-MONITOR
-1070
-284
-1140
-329
-NIL
-n-services
-17
-1
-11
-
-MONITOR
-1145
-285
-1225
-330
-NIL
-n-commerce
 17
 1
 11

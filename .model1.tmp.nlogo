@@ -795,7 +795,7 @@ NIL
 MONITOR
 1064
 382
-1132
+1127
 427
 N. deaths
 total-deaths
@@ -1096,10 +1096,10 @@ PENS
 "retired" 1.0 0 -16448764 true "" "plot count turtles with[occupation = \"retired\"]"
 
 MONITOR
-1020
-435
-1122
-480
+946
+482
+1048
+527
 N. mask adhrents
 n-mask-adhrents
 17
@@ -1107,10 +1107,10 @@ n-mask-adhrents
 11
 
 MONITOR
-865
-435
-1017
-480
+945
+434
+1097
+479
 N. people breaking lockdown
 n-population-leak
 17

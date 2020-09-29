@@ -21,30 +21,24 @@ turtles-own [
 
 globals [
   cycle-days
-  school-area
   day hour
   tick-day
   n-sicks
   n-healthys
-  n-students
-  n-students-sicks
   n-deaths
   n-leaks
   n-waves
-  totalPercentage
 ]
 
 to setup
   clear-all
-  set n-students-sicks 0
   set n-leaks 0
   set n-deaths 0
-  set tick-day 5
+  set tick-day 10
   set n-sicks 0
   set n-healthys 0
   set n-waves 1
   setup-city
-  setup-school
   setup-population
   setup-sectors
   ask n-of initial-infecteds healthys
@@ -65,11 +59,26 @@ to setup-city
      setxy (random-xcor * 0.95) (random-ycor * (0.50))
      set color white set shape "house" set size 12
    ]
-end
 
-to setup-school
-  set school-area patches with [pxcor > 20  and pycor > 90]
-  ask school-area [ set pcolor yellow ]
+  ; sector: school
+  let school-area patches with [pxcor > 50 and pycor > 90]
+  ask school-area [ set pcolor sky + 2 ]
+
+  ; sector: industry
+  let industry-area patches with [pxcor > -58 and pxcor < 58 and pycor < -90]
+  ask industry-area [ set pcolor violet + 2 ]
+
+  ; sector: commerce
+  let commerce-area patches with [pxcor < -60  and pycor < -90]
+  ask commerce-area [ set pcolor green + 2]
+
+  ; sector: servicesf
+  let service-area patches with [pxcor > 60  and pycor < -90]
+  ask service-area [ set pcolor brown + 2]
+
+  ; sector: construction
+  let construction-area patches with [pxcor < -10 and pycor > 90]
+  ask construction-area [ set pcolor orange + 2 ]
 end
 
 to setup-sectors
@@ -81,7 +90,7 @@ to setup-sectors
 
   set aux count healthys with[occupation = "student" or occupation = "retired"]
   let totalPop (population - aux)
-  set totalPercentage 0
+  let totalPercentage 0
 
   ; sector: services
   ask n-of ((totalPop * %-services) / 100) healthys with[occupation = "none"]
@@ -120,29 +129,13 @@ to setup-sectors
     ]
   ]
 
-  ; sector: health
-  if totalPercentage != 100
-  [
-    ifelse totalPercentage + %-health <= 100
-    [ ask n-of ((totalPop * %-health) / 100) healthys with[occupation = "none"]
-      [ set occupation "health"
-        set totalPercentage (%-services + %-commerce + %-industry + %-health) ]
-    ]
-    [
-      set aux count healthys with[occupation = "none"]
-      ask n-of aux healthys with[occupation = "none"]
-      [ set occupation "health"
-        set totalPercentage 100 ]
-    ]
-  ]
-
   ; sector: construction
   if totalPercentage != 100
   [
     ifelse totalPercentage + %-construction <= 100
     [ ask n-of ((totalPop * %-construction) / 100) healthys with[occupation = "none"]
       [ set occupation "construction"
-        set totalPercentage (%-services + %-commerce + %-industry + %-health + %-construction) ]
+        set totalPercentage (%-services + %-commerce + %-industry + %-construction) ]
     ]
     [
       set aux count healthys with[occupation = "none"]
@@ -304,7 +297,7 @@ to adjust
      while [ cycle-days < (lockdown-counter + workday-counter) + 1 ]
      [
          ifelse cycle-days < workday-counter + 1
-           [ move-to-school
+           [ open-sectors
              epidemic ]
            [ ad-lockdown ]
          if ticks mod tick-day = 0
@@ -341,19 +334,135 @@ to ad-lockdown
 end
 
 to move-turtles
-  ask turtles with [shape = "person" and occupation != "student" and not lockdown?][
+  ask turtles with [shape = "person" and not lockdown?][
     let current-turtle self
-    if [pcolor] of patch-ahead 1 != yellow [
-      set heading heading + (random-float 3 - random-float 3)
-      forward 1]
-    if [pcolor] of patch-ahead 3 = yellow [
-      set heading heading - 100
-      forward 1
+    if occupation != "student" [
+      if [pcolor] of patch-ahead 1 != sky + 2 [
+        set heading heading + (random-float 3 - random-float 3)
+        forward 1]
+      if [pcolor] of patch-ahead 3 = sky + 2 [
+        set heading heading - 100
+        forward 1
+      ]
+    ]
+
+    if occupation != "services" [
+      if [pcolor] of patch-ahead 1 != brown + 2 [
+        set heading heading + (random-float 3 - random-float 3)
+        forward 1]
+      if [pcolor] of patch-ahead 3 = brown + 2 [
+        set heading heading - 100
+        forward 1
+      ]
+    ]
+
+    if occupation != "commerce" [
+      if [pcolor] of patch-ahead 1 != green + 2 [
+        set heading heading + (random-float 3 - random-float 3)
+        forward 1]
+      if [pcolor] of patch-ahead 3 = green + 2 [
+        set heading heading - 100
+        forward 1
+      ]
+    ]
+
+    if occupation != "industry" [
+      if [pcolor] of patch-ahead 1 != violet + 2 [
+        set heading heading + (random-float 3 - random-float 3)
+        forward 1]
+      if [pcolor] of patch-ahead 3 = violet + 2 [
+        set heading heading - 100
+        forward 1
+      ]
+    ]
+
+    if occupation != "construction" [
+      if [pcolor] of patch-ahead 1 != orange + 2 [
+        set heading heading + (random-float 3 - random-float 3)
+        forward 1]
+      if [pcolor] of patch-ahead 3 = orange + 2 [
+        set heading heading - 100
+        forward 1
+      ]
     ]
     if distance current-turtle < 1 + (count sicks) [
-      set heading heading + (random-float 5 - random-float 5)]
+        set heading heading + (random-float 5 - random-float 5)]
   ]
   epidemic
+end
+
+to open-sectors
+  if open-school?
+  [ ask turtles with[shape = "person"]
+    [ if occupation = "student"
+      [
+        ifelse sick? and not asymptomatic?
+        [ move-to homebase
+          forward 0 ]
+        [ move-to one-of patches with [pcolor = sky + 2] ]
+      ]
+      if not lockdown?
+      [ move-turtles ]
+    ]
+  ]
+
+   if open-services?
+  [ ask turtles with[shape = "person"]
+    [ if occupation = "services"
+      [
+        ifelse sick? and not asymptomatic?
+        [ move-to homebase
+          forward 0 ]
+        [ move-to one-of patches with [pcolor = brown + 2] ]
+      ]
+      if not lockdown?
+      [ move-turtles ]
+    ]
+  ]
+
+   if open-commerce?
+  [ ask turtles with[shape = "person"]
+    [ if occupation = "commerce"
+      [
+        ifelse sick? and not asymptomatic?
+        [ move-to homebase
+          forward 0 ]
+        [ move-to one-of patches with [pcolor = green + 2] ]
+      ]
+      if not lockdown?
+      [ move-turtles ]
+    ]
+  ]
+
+  if open-industry?
+  [ ask turtles with[shape = "person"]
+    [ if occupation = "industry"
+      [
+        ifelse sick? and not asymptomatic?
+        [ move-to homebase
+          forward 0 ]
+        [ move-to one-of patches with [pcolor = violet + 2] ]
+      ]
+      if not lockdown?
+      [ move-turtles ]
+    ]
+  ]
+
+  if open-construction?
+  [ ask turtles with[shape = "person"]
+    [ if occupation = "construction"
+      [
+        ifelse sick? and not asymptomatic?
+        [ move-to homebase
+          forward 0 ]
+        [ move-to one-of patches with[pcolor = orange + 2 ] ]
+      ]
+      if not lockdown?
+      [ move-turtles ]
+    ]
+  ]
+  epidemic
+  return-home
 end
 
 to move-to-school
@@ -368,9 +477,7 @@ to move-to-school
         [ move-to one-of patches with [pcolor = yellow] ]
       ]
       if not lockdown?
-      [
-        move-turtles
-      ]
+      [ move-turtles ]
     ]
     epidemic
     return-home
@@ -439,8 +546,6 @@ to become-infected
   set sick? true
   set immune? false
   set healthy? false
-  if occupation = "student"
-    [ set n-students-sicks (n-students-sicks + 1) ]
 end
 
 to become-well
@@ -515,7 +620,7 @@ GRAPHICS-WINDOW
 476
 -1
 -1
-1.5
+1.51
 1
 10
 1
@@ -544,7 +649,7 @@ population
 population
 12
 999
-192.0
+75.0
 3
 1
 NIL
@@ -585,10 +690,10 @@ NIL
 0
 
 SLIDER
-865
-439
-1037
-472
+864
+363
+995
+396
 lockdown-duration
 lockdown-duration
 0
@@ -600,25 +705,25 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-869
-411
-1054
-433
+865
+334
+1050
+356
 Cyclic strategy
 16
 93.0
 1
 
 SLIDER
-1045
-440
-1217
-473
+1000
+363
+1122
+396
 workday-duration
 workday-duration
 0
 31
-4.0
+5.0
 1
 1
 NIL
@@ -635,31 +740,31 @@ Population characteristics\n\n
 1
 
 CHOOSER
-865
-358
-1037
-403
+1064
+266
+1169
+311
 strategy-type
 strategy-type
 "cyclic" "lockdown" "none"
 0
 
 TEXTBOX
-867
-333
-1017
-353
+1066
+238
+1216
+258
 Strategy type
 16
 93.0
 1
 
 TEXTBOX
-979
-416
-1189
-444
-(only if cyclic-strategy is select above)
+972
+339
+1182
+367
+(only if cyclic-strategy is select)
 11
 0.0
 1
@@ -721,17 +826,6 @@ initial-infecteds
 1
 NIL
 HORIZONTAL
-
-MONITOR
-864
-237
-986
-282
-N. infected students
-n-students-sicks
-17
-1
-11
 
 BUTTON
 202
@@ -871,72 +965,12 @@ num-of-waves
 11
 
 SLIDER
-250
-342
-354
-375
+242
+322
+346
+355
 %-industry
 %-industry
-0
-100
-39.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-139
-343
-244
-376
-%-commerce
-%-commerce
-0
-100
-34.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-28
-382
-133
-415
-%-health
-%-health
-0
-100
-29.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-138
-382
-243
-415
-%-construction
-%-construction
-0
-100
-60.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-28
-342
-132
-375
-%-services
-%-services
 0
 100
 20.0
@@ -946,10 +980,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-250
-382
+131
+323
+236
+356
+%-commerce
+%-commerce
+0
+100
+30.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+20
+322
+124
 355
-415
+%-services
+%-services
+0
+100
+31.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+20
+418
+125
+451
 %-retired
 %-retired
 0
@@ -961,41 +1025,41 @@ NIL
 HORIZONTAL
 
 SWITCH
-27
-424
-142
-457
+865
+440
+995
+473
 open-school?
 open-school?
-1
+0
 1
 -1000
 
 TEXTBOX
-30
+22
+293
+172
 313
-180
-333
 Sectors
 16
 93.0
 1
 
 TEXTBOX
-87
-317
-287
-335
+79
+297
+279
+315
 (% of the population in a given sector)
 11
 0.0
 1
 
 MONITOR
-991
-236
-1048
-281
+865
+235
+922
+280
 NIL
 n-youth
 17
@@ -1003,10 +1067,10 @@ n-youth
 11
 
 MONITOR
-1052
-236
-1109
-281
+926
+235
+983
+280
 NIL
 n-adult
 17
@@ -1014,15 +1078,84 @@ n-adult
 11
 
 MONITOR
-1114
-236
-1176
-281
+988
+235
+1050
+280
 NIL
 n-elderly
 17
 1
 11
+
+TEXTBOX
+22
+401
+149
+429
+% of retired elderly
+11
+0.0
+1
+
+SWITCH
+865
+402
+995
+435
+open-services?
+open-services?
+0
+1
+-1000
+
+SWITCH
+1001
+401
+1132
+434
+open-commerce?
+open-commerce?
+0
+1
+-1000
+
+SWITCH
+1139
+400
+1269
+433
+open-industry?
+open-industry?
+0
+1
+-1000
+
+SLIDER
+19
+361
+126
+394
+%-construction
+%-construction
+0
+100
+20.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+1002
+439
+1145
+472
+open-construction?
+open-construction?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?

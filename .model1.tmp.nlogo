@@ -11,7 +11,7 @@ turtles-own [
   homebase
   severity    ;; where 0 = mild and 1 = severe symptoms
   lockdown?
-  rangeClass age gender
+  rangeClass age
   death-prob
   wear-mask?
   asymptomatic?
@@ -173,7 +173,6 @@ to setup-population
     set lockdown? true
     set severity 0
     set rangeClass "none"
-    set gender "none"
     set wear-mask? false
     set asymptomatic? false
     set homebase one-of houses
@@ -181,7 +180,6 @@ to setup-population
   ]
   setup-range-age
   setup-death-rate
-  setup-gender
   setup-asymptomatics
   setup-mask-adhrents
   setup-population-leak
@@ -191,20 +189,50 @@ to setup-population
 end
 
 to setup-range-age
-  ask n-of ((population * 13.82) / 100) healthys
-  [
-    set rangeClass "elderly"
-    set age (random (100 - 60 + 1) + 60)
-  ]
-  ask n-of ((population * 56.65) / 100) healthys with[rangeClass = "none"]
-  [
-    set rangeClass "adult"
-    set age (random (59 - 20 + 1) + 20)
-  ]
-  ask n-of ((population * 23.32) / 100) healthys with[rangeClass = "none"]
+  let totalPercentage 0
+  let aux 0
+  ask n-of ((population * %-pop-youth) / 100) healthys
   [
     set rangeClass "youth"
     set age (random (19 - 5 + 1) + 19)
+    set totalPercentage %-pop-youth
+  ]
+
+  if totalPercentage != 100
+  [
+    ifelse (totalPercentage + %-pop-adult) <= 100 [
+       ask n-of ((population * %-pop-adult) / 100) healthys with[rangeClass = "none"]
+      [ set rangeClass "adult"
+        set age (random (59 - 20 + 1) + 20)
+        set totalPercentage (%-pop-youth + %-pop-adult) ]
+    ]
+    [ set aux count healthys with[rangeClass = "none"]
+      ask n-of aux healthys with[rangeClass = "none"]
+      [ set rangeClass "adult"
+        set age (random (59 - 20 + 1) + 20)
+        set totalPercentage 100 ]
+    ]
+  ]
+
+  if totalPercentage != 100
+  [
+    ifelse (totalPercentage + %-pop-elderly) <= 100 [
+      ask n-of ((population * %-pop-elderly) / 100) healthys with[rangeClass = "none"]
+      [ set rangeClass "elderly"
+        set age (random (100 - 60 + 1) + 60)
+        set totalPercentage (%-pop-youth + %-pop-adult + %-pop-elderly) ]
+    ]
+    [ set aux count healthys with[rangeClass = "none"]
+      ask n-of aux healthys with[rangeClass = "none"]
+      [ set rangeClass "elderly"
+        set age (random (100 - 60 + 1) + 60)
+        set totalPercentage 100 ]
+    ]
+  ]
+   set aux count healthys with[rangeClass = "none"]
+    ask n-of aux healthys with[rangeClass = "none"]
+    [ set rangeClass "adult"
+      set age (random (59 - 20 + 1) + 20) ]
   ]
 end
 
@@ -232,10 +260,7 @@ to setup-mask-adhrents
   ifelse %-mask-adhrents != 100
   [
     let adhrents ((population * %-mask-adhrents) / 100)
-    ask n-of ((adhrents * 50) / 100) healthys with[gender = "woman"]
-    [ set wear-mask? true
-      set n-mask (n-mask + 1) ]
-    ask n-of ((adhrents * 50) / 100) healthys with[not wear-mask?]
+    ask n-of ((population * %-mask-adhrents) / 100) healthys
     [ set wear-mask? true
       set n-mask (n-mask + 1) ]
   ]
@@ -244,30 +269,6 @@ to setup-mask-adhrents
     [ set wear-mask? true
       set n-mask population ]
   ]
-end
-
-to setup-gender
-  let qtd-elderly ((population * 13.82) / 100)
-  let qtd-adult ((population * 56.65) / 100)
-  let qtd-youth ((population * 23.32) / 100)
-
-  ; elderly gender
-  ask n-of ((qtd-elderly * 58.3) / 100) healthys with[rangeClass = "elderly" and gender = "none"]
-  [ set gender "woman" ]
-  ask n-of ((qtd-elderly * 41.7) / 100) healthys with[rangeClass = "elderly" and gender = "none"]
-  [ set gender "man" ]
-
-  ; adult gender
-  ask n-of ((qtd-adult * 51.52) / 100) healthys with[rangeClass = "adult" and gender = "none"]
-  [ set gender "woman" ]
-  ask n-of ((qtd-adult * 48.48) / 100) healthys with[rangeClass = "adult" and gender = "none"]
-  [ set gender "man" ]
-
-  ; youth gender
-  ask n-of ((qtd-youth * 49.45) / 100) healthys with[rangeClass = "youth" and gender = "none"]
-  [ set gender "woman" ]
-  ask n-of ((qtd-youth * 50.55) / 100) healthys with[rangeClass = "youth" and gender = "none"]
-  [ set gender "man" ]
 end
 
 to setup-population-leak
@@ -571,6 +572,21 @@ to-report max-sicks
   report max-infecteds
 end
 
+to-report n-elderly
+  let aux count turtles with[rangeClass ="elderly"]
+  report aux
+end
+
+to-report n-adult
+  let aux count turtles with[rangeClass ="adult"]
+  report aux
+end
+
+to-report n-youth
+  let aux count turtles with[rangeClass ="youth"]
+  report aux
+end
+
 to-report total-deaths
   report n-deaths
 end
@@ -627,7 +643,7 @@ population
 population
 12
 999
-51.0
+105.0
 3
 1
 NIL
@@ -701,7 +717,7 @@ workday-duration
 workday-duration
 0
 31
-5.0
+4.0
 1
 1
 NIL
@@ -739,10 +755,10 @@ PENS
 "immunes" 1.0 0 -7500403 true "" "plot count healthys with [ immune? ]"
 
 MONITOR
-866
-382
-938
-427
+1058
+380
+1130
+425
 N. infecteds
 total-infected
 0
@@ -763,13 +779,13 @@ Clock:
 SLIDER
 202
 95
-374
+375
 128
 initial-infecteds
 initial-infecteds
 0
 100
-51.0
+8.0
 1
 1
 NIL
@@ -793,10 +809,10 @@ NIL
 1
 
 MONITOR
-1064
-382
-1127
-427
+1192
+431
+1252
+476
 N. deaths
 total-deaths
 17
@@ -805,14 +821,14 @@ total-deaths
 
 SLIDER
 21
-140
+178
 193
-173
+211
 %-population-leak
 %-population-leak
 0
 100
-0.0
+30.0
 1
 1
 %
@@ -820,9 +836,9 @@ HORIZONTAL
 
 SWITCH
 21
-244
+282
 193
-277
+315
 immunity-duration?
 immunity-duration?
 1
@@ -831,9 +847,9 @@ immunity-duration?
 
 TEXTBOX
 22
-226
+264
 209
-254
+292
 (if on, immunity duration = 92 days)
 11
 0.0
@@ -841,14 +857,14 @@ TEXTBOX
 
 SLIDER
 203
-185
+223
 375
-218
+256
 mask-effectivity
 mask-effectivity
 0
 100
-100.0
+96.0
 1
 1
 %
@@ -856,14 +872,14 @@ HORIZONTAL
 
 SLIDER
 22
-184
+222
 194
-217
+255
 %-mask-adhrents
 %-mask-adhrents
 0
 100
-100.0
+75.0
 1
 1
 %
@@ -871,14 +887,14 @@ HORIZONTAL
 
 SLIDER
 202
-140
+178
 374
-173
+211
 %-asymptomatics
 %-asymptomatics
 0
 50
-50.0
+10.0
 1
 1
 %
@@ -913,60 +929,60 @@ num-of-waves
 11
 
 SLIDER
-242
-322
-346
-355
+240
+359
+344
+392
 %-industry
 %-industry
 0
 100
-20.0
+11.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-131
-323
-236
-356
+129
+360
+234
+393
 %-commerce
 %-commerce
 0
 100
-30.0
+25.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-20
-322
-124
-355
+18
+359
+122
+392
 %-services
 %-services
 0
 100
-100.0
+35.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-20
-424
-125
-457
+129
+399
+234
+432
 %-retired
 %-retired
 0
 100
-0.0
+60.0
 1
 1
 NIL
@@ -984,30 +1000,30 @@ open-school?
 -1000
 
 TEXTBOX
-22
-293
-172
-313
+20
+330
+170
+350
 Sectors
 16
 93.0
 1
 
 TEXTBOX
-79
-297
-365
-325
+77
+334
+363
+362
 (% of the adult and elderly population in a given sector)
 11
 0.0
 1
 
 TEXTBOX
-22
-407
-149
+135
 435
+262
+463
 % of retired elderly
 11
 0.0
@@ -1031,7 +1047,7 @@ SWITCH
 110
 open-commerce?
 open-commerce?
-0
+1
 1
 -1000
 
@@ -1042,15 +1058,15 @@ SWITCH
 111
 open-industry?
 open-industry?
-0
+1
 1
 -1000
 
 SLIDER
-19
-361
-126
-394
+17
+398
+124
+431
 %-construction
 %-construction
 0
@@ -1068,15 +1084,15 @@ SWITCH
 148
 open-construction?
 open-construction?
-0
+1
 1
 -1000
 
 PLOT
-1248
-165
-1532
-479
+1242
+137
+1492
+426
 Sector population
 NIL
 NIL
@@ -1096,10 +1112,10 @@ PENS
 "retired" 1.0 0 -16448764 true "" "plot count turtles with[occupation = \"retired\"]"
 
 MONITOR
-946
-482
-1048
-527
+1087
+431
+1189
+476
 N. mask adhrents
 n-mask-adhrents
 17
@@ -1107,21 +1123,21 @@ n-mask-adhrents
 11
 
 MONITOR
-945
-434
-1097
-479
-N. people breaking lockdown
+969
+431
+1085
+476
+N. breaking lockdown
 n-population-leak
 17
 1
 11
 
 MONITOR
-1135
-382
-1235
-427
+867
+431
+967
+476
 N. asymptomatics
 n-of-asymptomatics
 17
@@ -1129,12 +1145,90 @@ n-of-asymptomatics
 11
 
 MONITOR
-941
-382
-1061
-427
-Max n. of infecteds
+1133
+380
+1216
+425
+Max infecteds
 max-sicks
+17
+1
+11
+
+SLIDER
+22
+135
+137
+168
+%-pop-youth
+%-pop-youth
+0
+100
+50.0
+1
+1
+%
+HORIZONTAL
+
+SLIDER
+141
+135
+252
+168
+%-pop-adult
+%-pop-adult
+0
+100
+20.0
+1
+1
+%
+HORIZONTAL
+
+SLIDER
+255
+135
+375
+168
+%-pop-elderly
+%-pop-elderly
+0
+100
+30.0
+1
+1
+%
+HORIZONTAL
+
+MONITOR
+989
+380
+1055
+425
+N. elderly
+n-elderly
+17
+1
+11
+
+MONITOR
+866
+380
+928
+425
+N. youth
+n-youth
+17
+1
+11
+
+MONITOR
+930
+380
+987
+425
+N. adult
+n-adult
 17
 1
 11
